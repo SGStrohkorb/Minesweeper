@@ -51,4 +51,12 @@ class Game:
                         #print(x, y, i, j, "true")
         print(self.numbered_grid)
 
+        self.combined_grid = empty_grid.copy()
+        self.combined_grid = self.bomb_grid + self.numbered_grid
+        print(self.combined_grid)
+
+        self.visible_grid = empty_grid.copy()
+        self.visible_grid -= 2
+        print(self.visible_grid)
+
 thing = Game(8, 8, 10)
