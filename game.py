@@ -1,8 +1,11 @@
+import colorama
+from colorama import Fore, Style #Colors: 'BLACK', 'BLUE', 'CYAN', 'GREEN', 'LIGHTBLACK_EX', 'LIGHTBLUE_EX', 'LIGHTCYAN_EX', 'LIGHTGREEN_EX', 'LIGHTMAGENTA_EX', 'LIGHTRED_EX', 'LIGHTWHITE_EX', 'LIGHTYELLOW_EX', 'MAGENTA', 'RED', 'RESET', 'WHITE', 'YELLOW'
 import numpy as np
+
+colorama.init()
 np.random.seed(42)
 
 class Game:
-
     def __init__(self, height=16, width=30, number_of_bombs=99):
         self.height, self.width, self.number_of_bombs = height, width, number_of_bombs
         self.done = False
@@ -16,7 +19,7 @@ class Game:
             for j in range(self.width):
                 bomb_numbers_grid[i][j] = n
                 n += 1
-        print(bomb_numbers_grid)
+        #print(bomb_numbers_grid)
 
         self.bomb_grid = empty_grid.copy()
         #Make excessive number of bombs because randint doesn't create a set
@@ -33,8 +36,8 @@ class Game:
             bomb_coordinates.append([x, y])
             #print(bomb, x, y)
 
-        print(bomb_placement)
-        print(self.bomb_grid)
+        #print(bomb_placement)
+        #print(self.bomb_grid)
 
         self.numbered_grid = empty_grid.copy()
         for x, y in bomb_coordinates:
@@ -50,7 +53,7 @@ class Game:
                     else:
                         self.numbered_grid[i, j] += 1
                         #print(x, y, i, j, "true")
-        print(self.numbered_grid)
+        #print(self.numbered_grid)
 
         self.combined_grid = empty_grid.copy()
         self.combined_grid = self.bomb_grid + self.numbered_grid
@@ -58,7 +61,7 @@ class Game:
 
         self.visible_grid = empty_grid.copy()
         self.visible_grid -= 2
-        print(self.visible_grid)
+        #print(self.visible_grid)
 
         self.actions = empty_grid.copy()
         self.actions += 1
@@ -72,14 +75,13 @@ class Game:
         invalid_action = False
         if value == -1:
             self.done = True
+            self.visible_grid[x, y] = -3
         elif value != 0 and action_value == 1:
             self.visible_grid[x, y] = value
             self.actions[x, y] = 0
         elif value != 0 and action_value == 0:
             invalid_action = True
         elif value == 0 and action_value == 1:
-            #self.visible_grid[x, y] = value
-            #for x, y in (x, y):
             #print(x, y, "X, Y")
             points = [[x,y]]
             for X, Y in points:
@@ -97,10 +99,48 @@ class Game:
                                     #print([i,j], points, "Append")
                             self.visible_grid[i, j] = self.combined_grid[i, j]
                 #del points[0]
-        print(self.visible_grid)
+        print(self)
         return invalid_action
 
+    def __str__(self):
+        if -3 in self.visible_grid:
+            grid = self.combined_grid
+        else:
+            grid = self.visible_grid
+
+        for row in grid:
+            for i, element in enumerate(row):
+                if i != (len(row)-1):
+                    end = " "
+                else:
+                    end = "\n"
+
+                if element == -2:
+                    print(Fore.WHITE + '0', end=end)
+                elif element == 0:
+                    print(" ", end=end)
+                elif element == 1:
+                    print(Fore.BLUE + '1', end=end)
+                elif element == 2:
+                    print(Fore.GREEN + '2', end=end)
+                elif element == 3:
+                    print(Fore.LIGHTRED_EX + '3', end=end)
+                elif element == 4:
+                    print(Fore.LIGHTMAGENTA_EX + '4', end=end)
+                elif element == 5:
+                    print(Fore.RED + '5', end=end)
+                elif element == 6:
+                    print(Fore.CYAN + '6', end=end)
+                elif element == 7:
+                    print(Fore.LIGHTGREEN_EX + '7', end=end)
+                elif element == 8:
+                    print(Fore.LIGHTYELLOW_EX + '8', end=end)
+                elif element == -1:
+                    print(Fore.RED + 'B', end=end)
+                else:
+                    print(element, end=end)
+        return ""
+
 thing = Game(8, 8, 10)
-thing.left_mouse_click(0,4)
-thing.left_mouse_click(0,1)
 thing.left_mouse_click(0,0)
+thing.left_mouse_click(0,4)
