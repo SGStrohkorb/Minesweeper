@@ -6,8 +6,9 @@ colorama.init()
 np.random.seed(42)
 
 class Game:
-    def __init__(self, height=16, width=30, number_of_bombs=99):
+    def __init__(self, height=16, width=30, number_of_bombs=99, visual_updates=True):
         self.height, self.width, self.number_of_bombs = height, width, number_of_bombs
+        self.visual_updates = visual_updates
         self.done = False
 
         empty_grid = np.zeros((self.height, self.width))
@@ -57,7 +58,7 @@ class Game:
 
         self.combined_grid = empty_grid.copy()
         self.combined_grid = self.bomb_grid + self.numbered_grid
-        print(self.combined_grid)
+        #print(self.combined_grid)
 
         self.visible_grid = empty_grid.copy()
         self.visible_grid -= 2
@@ -100,7 +101,8 @@ class Game:
                                     #print([i,j], points, "Append")
                             self.visible_grid[i, j] = self.combined_grid[i, j]
                 #del points[0]
-        print(self)
+        if self.visual_updates:
+            print(self)
         return invalid_action
 
     def right_mouse_click(self, x, y):
@@ -108,13 +110,29 @@ class Game:
         visible_value = self.visible_grid[x, y]
 
         if visible_value == -2:
-            print("Triggered")
             self.visible_grid[x, y] = -4
         elif visible_value == -4:
             self.visible_grid[x, y] -= 1
         elif visible_value == -5:
             self.visible_grid[x, y] = -2
-        print(self)
+
+        if self.is_done():
+            print("Congration! You completed it!")
+
+        if self.visual_updates:
+            print(self)
+
+    def is_done(self):
+        n = 0
+        for i in range(self.height):
+            for j in range(self.width):
+                if (self.bomb_grid[i,j] == -1) and (self.visible_grid[i,j] == -4):
+                    n += 1
+
+        if n == self.number_of_bombs:
+            return True
+        else:
+            return False
 
     def __str__(self):
         if -3 in self.visible_grid:
@@ -152,16 +170,38 @@ class Game:
                 elif element == -1:
                     print(Fore.RED + 'B', end=end)
                 elif element == -4:
-                    print(Fore.WHITE+ chr(305), end=end)
+                    print(Fore.WHITE+ chr(1168), end=end)
                     #print(Fore.WHITE+ '*', end=end)
                 elif element == -5:
                     print(Fore.LIGHTBLACK_EX + chr(191), end=end)
                     #print(Fore.LIGHTBLACK_EX + '?', end=end)
                 else:
                     print(element, end=end)
-        return ""
+        return Fore.RESET + ''
 
-thing = Game(8, 8, 10) thing.left_mouse_click(0,0) thing.left_mouse_click(0,4)
-thing.right_mouse_click(0,2) thing.right_mouse_click(1,2)
-thing.right_mouse_click(1,2) thing.right_mouse_click(2,2)
-thing.right_mouse_click(2,2) thing.right_mouse_click(2,2)
+thing = Game(7, 7, 10, False)
+thing.left_mouse_click(1,1)
+thing.left_mouse_click(4,4)
+thing.left_mouse_click(1,6)
+thing.right_mouse_click(1,3)
+thing.left_mouse_click(0,3)
+thing.left_mouse_click(1,2)
+thing.right_mouse_click(0,2)
+thing.right_mouse_click(0,1)
+thing.right_mouse_click(5,4)
+thing.right_mouse_click(5,3)
+thing.left_mouse_click(6,4)
+thing.left_mouse_click(6,3)
+thing.left_mouse_click(6,2)
+thing.left_mouse_click(5,2)
+thing.left_mouse_click(5,1)
+thing.right_mouse_click(6,1)
+thing.left_mouse_click(3,0)
+thing.left_mouse_click(0,0)
+thing.right_mouse_click(2,0)
+thing.right_mouse_click(1,0)
+thing.left_mouse_click(4,0)
+thing.right_mouse_click(5,0)
+thing.right_mouse_click(6,0)
+print(thing)
+
