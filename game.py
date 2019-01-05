@@ -76,6 +76,7 @@ class Game:
         if value == -1:
             self.done = True
             self.visible_grid[x, y] = -3
+            self.actions = empty_grid.copy()
         elif value != 0 and action_value == 1:
             self.visible_grid[x, y] = value
             self.actions[x, y] = 0
@@ -101,6 +102,19 @@ class Game:
                 #del points[0]
         print(self)
         return invalid_action
+
+    def right_mouse_click(self, x, y):
+        value = self.combined_grid[x, y]
+        visible_value = self.visible_grid[x, y]
+
+        if visible_value == -2:
+            print("Triggered")
+            self.visible_grid[x, y] = -4
+        elif visible_value == -4:
+            self.visible_grid[x, y] -= 1
+        elif visible_value == -5:
+            self.visible_grid[x, y] = -2
+        print(self)
 
     def __str__(self):
         if -3 in self.visible_grid:
@@ -137,10 +151,17 @@ class Game:
                     print(Fore.LIGHTYELLOW_EX + '8', end=end)
                 elif element == -1:
                     print(Fore.RED + 'B', end=end)
+                elif element == -4:
+                    print(Fore.WHITE+ chr(305), end=end)
+                    #print(Fore.WHITE+ '*', end=end)
+                elif element == -5:
+                    print(Fore.LIGHTBLACK_EX + chr(191), end=end)
+                    #print(Fore.LIGHTBLACK_EX + '?', end=end)
                 else:
                     print(element, end=end)
         return ""
 
-thing = Game(8, 8, 10)
-thing.left_mouse_click(0,0)
-thing.left_mouse_click(0,4)
+thing = Game(8, 8, 10) thing.left_mouse_click(0,0) thing.left_mouse_click(0,4)
+thing.right_mouse_click(0,2) thing.right_mouse_click(1,2)
+thing.right_mouse_click(1,2) thing.right_mouse_click(2,2)
+thing.right_mouse_click(2,2) thing.right_mouse_click(2,2)
