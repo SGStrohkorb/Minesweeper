@@ -11,10 +11,10 @@ class Game:
         self.visual_updates = visual_updates
         self.done = False
 
-        empty_grid = np.zeros((self.height, self.width))
-        #print(empty_grid)
+        self.empty_grid = np.zeros((self.height, self.width))
+        #print(self.empty_grid)
 
-        bomb_numbers_grid = empty_grid.copy()
+        bomb_numbers_grid = self.empty_grid.copy()
         n = 0
         for i in range(self.height):
             for j in range(self.width):
@@ -22,7 +22,7 @@ class Game:
                 n += 1
         #print(bomb_numbers_grid)
 
-        self.bomb_grid = empty_grid.copy()
+        self.bomb_grid = self.empty_grid.copy()
         #Make excessive number of bombs because randint doesn't create a set
         #Then use only the number of bombs
         bomb_placement = np.random.randint(0, self.height*self.width, size=self.number_of_bombs*2)
@@ -40,7 +40,7 @@ class Game:
         #print(bomb_placement)
         #print(self.bomb_grid)
 
-        self.numbered_grid = empty_grid.copy()
+        self.numbered_grid = self.empty_grid.copy()
         for x, y in bomb_coordinates:
             #print(x, y)
             for i in [x-1, x, x+1]:
@@ -56,16 +56,18 @@ class Game:
                         #print(x, y, i, j, "true")
         #print(self.numbered_grid)
 
-        self.combined_grid = empty_grid.copy()
+        self.combined_grid = self.empty_grid.copy()
         self.combined_grid = self.bomb_grid + self.numbered_grid
         #print(self.combined_grid)
 
-        self.visible_grid = empty_grid.copy()
+        self.visible_grid = self.empty_grid.copy()
         self.visible_grid -= 2
         #print(self.visible_grid)
 
-        self.actions = empty_grid.copy()
+        self.actions = self.empty_grid.copy()
         self.actions += 1
+
+        self.tmp_solve_grid = self.empty_grid.copy()
 
     def left_mouse_click(self, x, y):
         """When the player 'clicks' on a point"""
@@ -77,7 +79,7 @@ class Game:
         if value == -1:
             self.done = True
             self.visible_grid[x, y] = -3
-            self.actions = empty_grid.copy()
+            self.actions = self.empty_grid.copy()
         elif value != 0 and action_value == 1:
             self.visible_grid[x, y] = value
             self.actions[x, y] = 0
@@ -103,6 +105,8 @@ class Game:
                 #del points[0]
         if self.visual_updates:
             print(self)
+        if self.is_done():
+            print("Congration! You done it!")
         return invalid_action
 
     def right_mouse_click(self, x, y):
@@ -117,7 +121,7 @@ class Game:
             self.visible_grid[x, y] = -2
 
         if self.is_done():
-            print("Congration! You completed it!")
+            print("Congration! You done it!")
 
         if self.visual_updates:
             print(self)
@@ -179,11 +183,114 @@ class Game:
                     print(element, end=end)
         return Fore.RESET + ''
 
+    def clear_step(self):
+        cleared = 0
+
+        for X in range(self.height):
+            for Y in range(self.width):
+                if self.visible_grid[X,Y] >= 1:
+                    number_of_bombs_local = self.visible_grid[X,Y]
+                    possible_bombs = 0
+                    known_bombs = 0
+                    #print(number_of_bombs_local)
+                    for i in [X-1, X, X+1]:
+                        for j in [Y-1, Y, Y+1]:
+                            if (i < 0) or (j < 0) or (i >= self.height) or (j >= self.width): #if coordinate is off of the grid
+                                pass
+                            elif self.visible_grid[i,j] in [-2, -5]:
+                                possible_bombs += 1
+                            elif self.visible_grid[i,j] == -4:
+                                known_bombs += 1
+                    #print(possible_bombs, number_of_bombs_local, X, Y)
+                    #print()
+
+                    if (known_bombs == number_of_bombs_local) and number_of_bombs_local != 0 and possible_bombs > 0:
+                        #print("Clearing", X, Y)
+                        cleared += 1
+                        for i in [X-1, X, X+1]:
+                            for j in [Y-1, Y, Y+1]:
+                                if (i < 0) or (j < 0) or (i >= self.height) or (j >= self.width): #if coordinate is off of the grid
+                                    pass
+                                elif self.visible_grid[i,j] == -2:
+                                    self.left_mouse_click(i,j)
+        return bool(cleared)
+
+    def solve_step(self):
+        old_visible_grid = self.visible_grid.copy()
+        print(self.visible_grid)
+        #print(self.combined_grid)
+
+        for X in range(self.height):
+            for Y in range(self.width):
+                if self.visible_grid[X,Y] >= 1:
+                    number_of_bombs_local = self.visible_grid[X,Y]
+                    possible_bombs = 0
+                    known_bombs = 0
+                    #print(number_of_bombs_local)
+                    for i in [X-1, X, X+1]:
+                        for j in [Y-1, Y, Y+1]:
+                            if (i < 0) or (j < 0) or (i >= self.height) or (j >= self.width): #if coordinate is off of the grid
+                                pass
+                            #elif self.visible_grid[i,j] == -2:
+                                #possible_bombs += 0
+                            elif self.visible_grid[i,j] in [-2, -5]:
+                                possible_bombs += 1
+                            elif self.visible_grid[i,j] == -4:
+                                known_bombs += 1
+                    #print(possible_bombs, number_of_bombs_local, X, Y)
+                    #print()
+                    
+                    if (possible_bombs+known_bombs) == number_of_bombs_local:
+                        if known_bombs == number_of_bombs_local:
+                            pass
+                        else:
+                            break
+            else: #these three lines are a easy way to break out of a nested loop https://stackoverflow.com/questions/653509/breaking-out-of-nested-loops
+                continue
+            break
+
+        print(X, Y)
+
+        if (possible_bombs+known_bombs) != number_of_bombs_local:
+            print("Not solved")
+
+        for i in [X-1, X, X+1]:
+            for j in [Y-1, Y, Y+1]:
+                if (i < 0) or (j < 0) or (i >= self.height) or (j >= self.width): #if coordinate is off of the grid
+                    pass
+                elif self.visible_grid[i,j] == -2:
+                    self.right_mouse_click(i,j)
+
+        self.clear_step()
+
+        if np.all(np.equal(old_visible_grid.flatten(), self.visible_grid.flatten())):
+            print("Not solved")
+
+        print()
+
+
+
 thing = Game(7, 7, 10, False)
 thing.left_mouse_click(1,1)
 thing.left_mouse_click(4,4)
 thing.left_mouse_click(1,6)
-thing.right_mouse_click(1,3)
+thing.solve_step()
+print(thing)
+thing.solve_step()
+print(thing)
+thing.solve_step()
+print(thing)
+thing.solve_step()
+print(thing)
+thing.solve_step()
+print(thing)
+thing.solve_step()
+print(thing)
+thing.solve_step()
+print(thing)
+
+
+'''
 thing.left_mouse_click(0,3)
 thing.left_mouse_click(1,2)
 thing.right_mouse_click(0,2)
@@ -204,4 +311,4 @@ thing.left_mouse_click(4,0)
 thing.right_mouse_click(5,0)
 thing.right_mouse_click(6,0)
 print(thing)
-
+'''
