@@ -24,10 +24,6 @@ class Game:
         #print(bomb_numbers_grid)
 
         self.bomb_grid = self.empty_grid.copy()
-        #Make excessive number of bombs because randint doesn't create a set
-        #Then use only the number of bombs
-        #bomb_placement = np.random.randint(0, self.height*self.width, size=self.number_of_bombs*2)
-        #bomb_placement = list(set(bomb_placement))
         bomb_placement = []
         bomb_coordinates = []
         #I know this isn't the most efficient way to do this, it just makes sense to me
@@ -227,6 +223,7 @@ class Game:
 
         #print()
 
+        if_break = False
         for X in range(self.height):
             for Y in range(self.width):
                 if self.visible_grid[X,Y] >= 1:
@@ -254,16 +251,18 @@ class Game:
                             break
             else: #these three lines are a easy way to break out of a nested loop https://stackoverflow.com/questions/653509/breaking-out-of-nested-loops
                 continue
+            if_break = True
             break
 
         #print(X, Y)
 
-        for i in [X-1, X, X+1]:
-            for j in [Y-1, Y, Y+1]:
-                if (i < 0) or (j < 0) or (i >= self.height) or (j >= self.width): #if coordinate is off of the grid
-                    pass
-                elif self.visible_grid[i,j] == -2:
-                    self.right_mouse_click(i,j)
+        if if_break:
+            for i in [X-1, X, X+1]:
+                for j in [Y-1, Y, Y+1]:
+                    if (i < 0) or (j < 0) or (i >= self.height) or (j >= self.width): #if coordinate is off of the grid
+                        pass
+                    elif self.visible_grid[i,j] == -2:
+                        self.right_mouse_click(i,j)
 
         #self.clear_step()
 
@@ -367,7 +366,7 @@ class Game:
                             if (i < 0) or (j < 0) or (i >= self.height) or (j >= self.width): #if coordinate is off of the grid
                                 pass
                             else:
-                                if (tmp_grid[i,j] == 1) and (i in [I-1, I, I+1]) and (j in [J-1, J, J+1]):
+                                if (tmp_grid[i,j] == 1):# and (i in [I-1, I, I+1]) and (j in [J-1, J, J+1]):
                                     print("Bomb found", i, j)
                                     bombs.append([i,j])
                                     self.right_mouse_click(i,j)
@@ -418,35 +417,31 @@ class Game:
 
 
 
-thing = Game(10, 10, 20, False)
+thing = Game(10, 10, 20, True)
 print(thing.combined_grid)
-'''
-thing.left_mouse_click(1,1)
-thing.left_mouse_click(5,5)
-thing.left_mouse_click(5,6)
-thing.left_mouse_click(9,9)
-print(thing)
 
+thing.left_mouse_click(0,9)
 thing.solve_step()
-#print(thing)
+thing.left_mouse_click(9,0)
 thing.solve_step()
-#print(thing)
-thing.solve_step()
-#print(thing)
-thing.solve_step()
-#print(thing)
-thing.solve_step()
-#print(thing)
-thing.solve_step()
-#print(thing)
+thing.left_mouse_click(4,4)
 thing.solve_step()
 thing.solve_step()
 thing.solve_step()
-print(thing)
-#thing.solve_step()
-print(thing)
+thing.solve_step()
+thing.solve_step()
+thing.solve_step()
+thing.solve_step()
+thing.solve_step()
+thing.solve_step()
+thing.solve_step()
+thing.solve_step()
+thing.solve_step()
+thing.solve_step()
+thing.solve_step()
+thing.solve_step()
+thing.solve_step()
 
-'''
 
 
 '''
