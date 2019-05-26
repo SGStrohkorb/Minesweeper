@@ -26,16 +26,20 @@ class Game:
         self.bomb_grid = self.empty_grid.copy()
         #Make excessive number of bombs because randint doesn't create a set
         #Then use only the number of bombs
-        bomb_placement = np.random.randint(0, self.height*self.width, size=self.number_of_bombs*2)
-        bomb_placement = list(set(bomb_placement))
+        #bomb_placement = np.random.randint(0, self.height*self.width, size=self.number_of_bombs*2)
+        #bomb_placement = list(set(bomb_placement))
+        bomb_placement = []
         bomb_coordinates = []
         #I know this isn't the most efficient way to do this, it just makes sense to me
         for i in range(self.number_of_bombs):
-            bomb = bomb_placement[i]
+            bomb = np.random.randint(0, self.height*self.width)
+            while bomb in bomb_placement:
+                bomb = np.random.randint(0, self.height*self.width)
             x, y = np.where(bomb_numbers_grid == bomb)
             x, y = x[0], y[0]
             self.bomb_grid[x, y] = -1
             bomb_coordinates.append([x, y])
+            bomb_placement.append(bomb)
             #print(bomb, x, y)
 
         #print(bomb_placement)
@@ -265,6 +269,7 @@ class Game:
 
         if np.all(np.equal(old_visible_grid.flatten(), self.visible_grid.flatten())):
             print("Not solved")
+            print(self)
             
             #possible_bombs = self.empty_grid.copy()
             possible_bombs = []
@@ -318,8 +323,12 @@ class Game:
                         else:
                             if [i, j] in known_number_of_bombs:
                                 tmp_bombs_needed = known_number_of_bombs_masks[i][j][1]
-                                if (bombs_needed - tmp_bombs_needed) == 1:
+                                print(bombs_needed, tmp_bombs_needed, bombs_needed - tmp_bombs_needed, X, Y, i, j)
+                                bomb_difference = bombs_needed - tmp_bombs_needed
+                                if bomb_difference == 1:
                                     solvable_pairs.append([[X,Y],[i,j]])
+                                elif bomb_difference == 2:
+                                    print("difference")
                 n += 1
 
             print(solvable_pairs)
@@ -358,7 +367,7 @@ class Game:
                             if (i < 0) or (j < 0) or (i >= self.height) or (j >= self.width): #if coordinate is off of the grid
                                 pass
                             else:
-                                if tmp_grid[i,j] == 1:
+                                if (tmp_grid[i,j] == 1) and (i in [I-1, I, I+1]) and (j in [J-1, J, J+1]):
                                     print("Bomb found", i, j)
                                     bombs.append([i,j])
                                     self.right_mouse_click(i,j)
@@ -405,12 +414,13 @@ class Game:
                     pass
 
 
-
         self.clear_step()
 
 
 
 thing = Game(10, 10, 20, False)
+print(thing.combined_grid)
+'''
 thing.left_mouse_click(1,1)
 thing.left_mouse_click(5,5)
 thing.left_mouse_click(5,6)
@@ -433,10 +443,10 @@ thing.solve_step()
 thing.solve_step()
 thing.solve_step()
 print(thing)
-thing.solve_step()
+#thing.solve_step()
 print(thing)
 
-
+'''
 
 
 '''
