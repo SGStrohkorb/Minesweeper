@@ -1,13 +1,13 @@
 import colorama
 from colorama import Fore, Style #Colors: 'BLACK', 'BLUE', 'CYAN', 'GREEN', 'LIGHTBLACK_EX', 'LIGHTBLUE_EX', 'LIGHTCYAN_EX', 'LIGHTGREEN_EX', 'LIGHTMAGENTA_EX', 'LIGHTRED_EX', 'LIGHTWHITE_EX', 'LIGHTYELLOW_EX', 'MAGENTA', 'RED', 'RESET', 'WHITE', 'YELLOW'
 import numpy as np
-from scipy import ndimage
+from itertools import permutations
 
 colorama.init()
 np.random.seed(42) #need to remove later
 
 class Game:
-    def __init__(self, height=16, width=30, number_of_bombs=99, visual_updates=True):
+    def __init__(self, height=16, width=30, number_of_bombs=99, visual_updates=True, _for_solver=False):
         self.height, self.width, self.number_of_bombs = height, width, number_of_bombs
         self.visual_updates = visual_updates
         self.done = False
@@ -57,6 +57,10 @@ class Game:
                         #print(x, y, i, j, "true")
         #print(self.numbered_grid)
 
+        if _for_solver:
+            self.bomb_grid = _for_solver[0]
+            self.numbered_grid = _for_solver[1]
+
         self.combined_grid = self.empty_grid.copy()
         self.combined_grid = self.bomb_grid + self.numbered_grid
         #print(self.combined_grid)
@@ -64,6 +68,9 @@ class Game:
         self.visible_grid = self.empty_grid.copy()
         self.visible_grid -= 2
         #print(self.visible_grid)
+
+        if _for_solver:
+            self.visible_grid = _for_solver[2]
 
         self.actions = self.empty_grid.copy()
         self.actions += 1
@@ -108,6 +115,7 @@ class Game:
             print(self)
         if self.is_done():
             print("Congration! You done it!")
+            return True
         return invalid_action
 
     def right_mouse_click(self, x, y):
@@ -123,11 +131,33 @@ class Game:
 
         if self.is_done():
             print("Congration! You done it!")
+            return True
 
         if self.visual_updates:
             print(self)
 
     def is_done(self):
+
+        contradiction = False
+        for Y in range(self.height):
+            for X in range(self.width):
+                tmp_needed_number_of_bombs = self.visible_grid[X,Y]
+                tmp_actual_number_of_bombs = 0
+                for i in [X-1, X, X+1]:
+                    for j in [Y-1, Y, Y+1]:
+                        if (i < 0) or (j < 0) or (i >= self.height) or (j >= self.width): #if coordinate is off of the grid
+                            pass
+                        else:
+                            if self.visible_grid[i,j] == -4:
+                                tmp_actual_number_of_bombs += 1
+
+                    if tmp_needed_number_of_bombs != tmp_actual_number_of_bombs:
+                        contradiction = True
+                        return False
+
+        if not contradiction:
+            return True
+
         n = 0
         for i in range(self.height):
             for j in range(self.width):
@@ -190,7 +220,7 @@ class Solving_Game(Game):
     def __init__(self, height=16, width=30, number_of_bombs=99, visual_updates=True):
         super().__init__(height, width, number_of_bombs, visual_updates)
 
-    
+
     def clear_step(self):
         cleared = 0
 
@@ -385,7 +415,7 @@ class Solving_Game(Game):
             if len(bombs) == 0:
                 print("Not solved again")
                 print(known_number_of_bombs)
-                print(known_number_of_bombs_masks)
+                #print(known_number_of_bombs_masks)
 
                 current_bomb_count = self.visible_grid.copy().flatten()
                 current_bomb_count = np.sum([1 if x == -4 else 0 for x in current_bomb_count])
@@ -397,6 +427,7 @@ class Solving_Game(Game):
 
                 tmp_mask_grid = self.empty_grid.copy()
                 tmp_placement_grid = self.empty_grid.copy()
+                bomb_coordinates = []
                 for X, Y in known_number_of_bombs:
                     mask = known_number_of_bombs_masks[X][Y][0]
 
@@ -406,18 +437,87 @@ class Solving_Game(Game):
                             if (i < 0) or (j < 0) or (i >= self.height) or (j >= self.width): #if coordinate is off of the grid
                                 pass
                             else:
-                                #if tmp_mask_grid[i,j] != 1:
-                                tmp_mask_grid[i,j] += mask[i-X+1][j-Y+1] #transition absolute coordinates to mask coordinates
+                                if tmp_mask_grid[i,j] != -1:
+                                    tmp_mask_grid[i,j] -= mask[i-X+1][j-Y+1] #transition absolute coordinates to mask coordinates
+                                    if mask[i-X+1][j-Y+1] == 1:
+                                        bomb_coordinates.append([i,j])
+
+                bomb_coordinates = np.array(bomb_coordinates)
 
                 print(tmp_mask_grid)
+                print(bomb_coordinates)
                 print(tmp_placement_grid)
 
-                _, number_of_islands = ndimage.label(tmp_placement_grid)
-                print(number_of_islands)
+                Y_min = bomb_coordinates[:, 0].min()
+                Y_max = bomb_coordinates[:, 0].max()
+                X_min = bomb_coordinates[:, 1].min()
+                X_max = bomb_coordinates[:, 1].max()
 
-                for i in np.array(range(bombs_left))+1:
-                    #print(i)
-                    pass
+                #print(tmp_mask_grid[(Y_min-1):(Y_max+2), (X_min):(X_max+2)])
+
+                
+                if Y_min == 0:
+                    tmp_bomb_grid = tmp_mask_grid[(Y_min):(Y_max+2), (X_min-1):(X_max+2)]
+                    tmp_numbered_grid = tmp_placement_grid[(Y_min):(Y_max+2), (X_min-1):(X_max+2)]
+                    X_adjust = 0
+                    Y_adjust = 0
+                elif Y_max == (self.height - 1):
+                    tmp_bomb_grid = tmp_mask_grid[(Y_min-1):(Y_max+2-1), (X_min-1):(X_max+2)]
+                    tmp_numbered_grid = tmp_placement_grid[(Y_min-1):(Y_max+2-1), (X_min-1):(X_max+2)]
+                    X_adjust = 0
+                    Y_adjust = 0
+                elif X_min == 0:
+                    tmp_bomb_grid = tmp_mask_grid[(Y_min-1):(Y_max+2), (X_min):(X_max+2)]
+                    tmp_numbered_grid = tmp_placement_grid[(Y_min-1):(Y_max+2), (X_min):(X_max+2)]
+                    X_adjust = 0
+                    Y_adjust = 0
+                elif X_max == (self.width - 1):
+                    tmp_bomb_grid = tmp_mask_grid[(Y_min-1):(Y_max+2), (X_min-1):(X_max+2-1)]
+                    tmp_numbered_grid = tmp_placement_grid[(Y_min-1):(Y_max+2), (X_min-1):(X_max+2-1)]
+                    X_adjust = 0
+                    Y_adjust = 0
+                else:
+                    tmp_bomb_grid = tmp_mask_grid[(Y_min-1):(Y_max+2), (X_min-1):(X_max+2)]
+                    tmp_numbered_grid = tmp_placement_grid[(Y_min-1):(Y_max+2), (X_min-1):(X_max+2)]
+                    X_adjust = 1
+                    Y_adjust = 1
+                
+                print(tmp_bomb_grid)
+                print(tmp_numbered_grid)
+
+                tmp_visible_grid = tmp_numbered_grid
+
+                tmp_bomb_coordinates = []
+                for i in range(tmp_bomb_grid.shape[0]):
+                    for j in range(tmp_bomb_grid.shape[1]):
+                        if tmp_bomb_grid[i,j] == -1:
+                            tmp_bomb_coordinates.append([i, j])
+                            tmp_visible_grid[i,j] = -2
+
+
+                possible_bomb_permutations = permutations(tmp_bomb_coordinates, int(bombs_left))
+
+                for thing in possible_bomb_permutations:
+                    print(thing)
+
+                possible_bomb_permutations = permutations(tmp_bomb_coordinates, int(bombs_left))
+                for permutation in list(possible_bomb_permutations):
+                    print("inside loop")
+                    tmp_game = Game(tmp_bomb_grid.shape[0], tmp_bomb_grid.shape[1], 1, False, [tmp_bomb_grid, tmp_numbered_grid, tmp_visible_grid])
+                    print(tmp_game)
+                    print(tmp_game.combined_grid)
+
+                    for X, Y in permutation:
+                        tmp_game.right_mouse_click(X, Y)
+
+                    tmp_game.
+
+                    print(tmp_game.visible_grid)
+                    print("Is done", tmp_game.is_done())
+
+                    break
+
+
 
 
         self.clear_step()
