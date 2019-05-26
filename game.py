@@ -184,6 +184,13 @@ class Game:
                     print(element, end=end)
         return Fore.RESET + ''
 
+
+class Solving_Game(Game):
+
+    def __init__(self, height=16, width=30, number_of_bombs=99, visual_updates=True):
+        super().__init__(height, width, number_of_bombs, visual_updates)
+
+    
     def clear_step(self):
         cleared = 0
 
@@ -416,8 +423,7 @@ class Game:
         self.clear_step()
 
 
-
-thing = Game(10, 10, 20, True)
+thing = Solving_Game(10, 10, 20, True)
 print(thing.combined_grid)
 
 thing.left_mouse_click(0,9)
