@@ -7,10 +7,11 @@ colorama.init()
 np.random.seed(42) #need to remove later
 
 class Game:
-    def __init__(self, height=16, width=30, number_of_bombs=99, visual_updates=True, _for_solver=False):
+    def __init__(self, height=16, width=30, number_of_bombs=99, visual_updates=True):
         self.height, self.width, self.number_of_bombs = height, width, number_of_bombs
         self.visual_updates = visual_updates
         self.done = False
+        self.win = False
 
         self.empty_grid = np.zeros((self.height, self.width))
         #print(self.empty_grid)
@@ -56,11 +57,6 @@ class Game:
                         self.numbered_grid[i, j] += 1
                         #print(x, y, i, j, "true")
         #print(self.numbered_grid)
-
-        if _for_solver:
-            self.bomb_grid = _for_solver[0]
-            self.numbered_grid = _for_solver[1]
-
         self.combined_grid = self.empty_grid.copy()
         self.combined_grid = self.bomb_grid + self.numbered_grid
         #print(self.combined_grid)
@@ -68,9 +64,6 @@ class Game:
         self.visible_grid = self.empty_grid.copy()
         self.visible_grid -= 2
         #print(self.visible_grid)
-
-        if _for_solver:
-            self.visible_grid = _for_solver[2]
 
         self.actions = self.empty_grid.copy()
         self.actions += 1
@@ -86,6 +79,7 @@ class Game:
         invalid_action = False
         if value == -1:
             self.done = True
+            self.win = False
             self.visible_grid[x, y] = -3
             self.actions = self.empty_grid.copy()
         elif value != 0 and action_value == 1:
@@ -113,9 +107,14 @@ class Game:
                 #del points[0]
         if self.visual_updates:
             print(self)
+
         if self.is_done():
-            print("Congration! You done it!")
-            return True
+            if self.win:
+                print("Congration! You done it!")
+                return True
+            else:
+                print("You lost")
+                return True
         return invalid_action
 
     def right_mouse_click(self, x, y):
@@ -130,19 +129,24 @@ class Game:
             self.visible_grid[x, y] = -2
 
         if self.is_done():
-            print("Congration! You done it!")
-            return True
+            if self.win:
+                print("Congration! You done it!")
+                return True
+            else:
+                print("You lost")
+                return True
 
         if self.visual_updates:
             print(self)
 
     def is_done(self):
-
+        #print(self.visible_grid)
         contradiction = False
-        for Y in range(self.height):
-            for X in range(self.width):
-                tmp_needed_number_of_bombs = self.visible_grid[X,Y]
+        for X in range(self.height):
+            for Y in range(self.width):
+                tmp_needed_number_of_bombs = self.visible_grid[X, Y]
                 tmp_actual_number_of_bombs = 0
+                tmp_number_of_uncovered_spots = 0
                 for i in [X-1, X, X+1]:
                     for j in [Y-1, Y, Y+1]:
                         if (i < 0) or (j < 0) or (i >= self.height) or (j >= self.width): #if coordinate is off of the grid
@@ -150,25 +154,25 @@ class Game:
                         else:
                             if self.visible_grid[i,j] == -4:
                                 tmp_actual_number_of_bombs += 1
+                            elif self.visible_grid[i,j] == -3:
+                                self.done = True
+                                self.win = False
+                                return True
+                            elif self.visible_grid[i,j] == -2:
+                                tmp_number_of_uncovered_spots += 1
+                #print(tmp_number_of_uncovered_spots, X, Y, i, j)
 
-                    if tmp_needed_number_of_bombs != tmp_actual_number_of_bombs:
-                        contradiction = True
-                        return False
+                if ((tmp_needed_number_of_bombs != tmp_actual_number_of_bombs) and (tmp_needed_number_of_bombs > 0)) or (tmp_number_of_uncovered_spots != 0):
+                    contradiction = True
 
-        if not contradiction:
-            return True
-
-        n = 0
-        for i in range(self.height):
-            for j in range(self.width):
-                if (self.bomb_grid[i,j] == -1) and (self.visible_grid[i,j] == -4):
-                    n += 1
-
-        if n == self.number_of_bombs:
-            return True
-        else:
+        
+        if contradiction:
             return False
-
+        else:
+            self.done = True
+            self.win = True
+            return True
+        
     def __str__(self):
         if -3 in self.visible_grid:
             grid = self.combined_grid
@@ -214,13 +218,6 @@ class Game:
                     print(element, end=end)
         return Fore.RESET + ''
 
-
-class Solving_Game(Game):
-
-    def __init__(self, height=16, width=30, number_of_bombs=99, visual_updates=True):
-        super().__init__(height, width, number_of_bombs, visual_updates)
-
-
     def clear_step(self):
         cleared = 0
 
@@ -252,6 +249,11 @@ class Solving_Game(Game):
                                 elif self.visible_grid[i,j] == -2:
                                     self.left_mouse_click(i,j)
         return bool(cleared)
+
+class Solving_Game(Game):
+
+    def __init__(self, height=16, width=30, number_of_bombs=99, visual_updates=True):
+        super().__init__(height, width, number_of_bombs, visual_updates)
 
     def solve_step(self):
         old_visible_grid = self.visible_grid.copy()
@@ -305,7 +307,7 @@ class Solving_Game(Game):
 
         if np.all(np.equal(old_visible_grid.flatten(), self.visible_grid.flatten())):
             print("Not solved")
-            print(self)
+            #print(self)
             
             #possible_bombs = self.empty_grid.copy()
             possible_bombs = []
@@ -359,7 +361,7 @@ class Solving_Game(Game):
                         else:
                             if [i, j] in known_number_of_bombs:
                                 tmp_bombs_needed = known_number_of_bombs_masks[i][j][1]
-                                print(bombs_needed, tmp_bombs_needed, bombs_needed - tmp_bombs_needed, X, Y, i, j)
+                                #print(bombs_needed, tmp_bombs_needed, bombs_needed - tmp_bombs_needed, X, Y, i, j)
                                 bomb_difference = bombs_needed - tmp_bombs_needed
                                 if bomb_difference == 1:
                                     solvable_pairs.append([[X,Y],[i,j]])
@@ -367,7 +369,7 @@ class Solving_Game(Game):
                                     print("difference")
                 n += 1
 
-            print(solvable_pairs)
+            #print(solvable_pairs)
 
             bombs = []
             if len(solvable_pairs) != 0:
@@ -404,7 +406,7 @@ class Solving_Game(Game):
                                 pass
                             else:
                                 if (tmp_grid[i,j] == 1):# and (i in [I-1, I, I+1]) and (j in [J-1, J, J+1]):
-                                    print("Bomb found", i, j)
+                                    #print("Bomb found", i, j)
                                     bombs.append([i,j])
                                     self.right_mouse_click(i,j)
                                     
@@ -414,7 +416,7 @@ class Solving_Game(Game):
 
             if len(bombs) == 0:
                 print("Not solved again")
-                print(known_number_of_bombs)
+                #print(known_number_of_bombs)
                 #print(known_number_of_bombs_masks)
 
                 current_bomb_count = self.visible_grid.copy().flatten()
@@ -444,9 +446,9 @@ class Solving_Game(Game):
 
                 bomb_coordinates = np.array(bomb_coordinates)
 
-                print(tmp_mask_grid)
-                print(bomb_coordinates)
-                print(tmp_placement_grid)
+                #print(tmp_mask_grid)
+                #print(bomb_coordinates)
+                #print(tmp_placement_grid)
 
                 Y_min = bomb_coordinates[:, 0].min()
                 Y_max = bomb_coordinates[:, 0].max()
@@ -459,31 +461,31 @@ class Solving_Game(Game):
                 if Y_min == 0:
                     tmp_bomb_grid = tmp_mask_grid[(Y_min):(Y_max+2), (X_min-1):(X_max+2)]
                     tmp_numbered_grid = tmp_placement_grid[(Y_min):(Y_max+2), (X_min-1):(X_max+2)]
-                    X_adjust = 0
+                    X_adjust = 1
                     Y_adjust = 0
                 elif Y_max == (self.height - 1):
                     tmp_bomb_grid = tmp_mask_grid[(Y_min-1):(Y_max+2-1), (X_min-1):(X_max+2)]
                     tmp_numbered_grid = tmp_placement_grid[(Y_min-1):(Y_max+2-1), (X_min-1):(X_max+2)]
-                    X_adjust = 0
-                    Y_adjust = 0
+                    X_adjust = 1
+                    Y_adjust = 1
                 elif X_min == 0:
                     tmp_bomb_grid = tmp_mask_grid[(Y_min-1):(Y_max+2), (X_min):(X_max+2)]
                     tmp_numbered_grid = tmp_placement_grid[(Y_min-1):(Y_max+2), (X_min):(X_max+2)]
                     X_adjust = 0
-                    Y_adjust = 0
+                    Y_adjust = 1
                 elif X_max == (self.width - 1):
                     tmp_bomb_grid = tmp_mask_grid[(Y_min-1):(Y_max+2), (X_min-1):(X_max+2-1)]
                     tmp_numbered_grid = tmp_placement_grid[(Y_min-1):(Y_max+2), (X_min-1):(X_max+2-1)]
-                    X_adjust = 0
-                    Y_adjust = 0
+                    X_adjust = 1
+                    Y_adjust = 1
                 else:
                     tmp_bomb_grid = tmp_mask_grid[(Y_min-1):(Y_max+2), (X_min-1):(X_max+2)]
                     tmp_numbered_grid = tmp_placement_grid[(Y_min-1):(Y_max+2), (X_min-1):(X_max+2)]
                     X_adjust = 1
                     Y_adjust = 1
                 
-                print(tmp_bomb_grid)
-                print(tmp_numbered_grid)
+                #print(tmp_bomb_grid)
+                #print(tmp_numbered_grid)
 
                 tmp_visible_grid = tmp_numbered_grid
 
@@ -492,35 +494,49 @@ class Solving_Game(Game):
                     for j in range(tmp_bomb_grid.shape[1]):
                         if tmp_bomb_grid[i,j] == -1:
                             tmp_bomb_coordinates.append([i, j])
-                            tmp_visible_grid[i,j] = -2
 
 
+                solution_found = False
                 possible_bomb_permutations = permutations(tmp_bomb_coordinates, int(bombs_left))
-
-                for thing in possible_bomb_permutations:
-                    print(thing)
-
-                possible_bomb_permutations = permutations(tmp_bomb_coordinates, int(bombs_left))
-                for permutation in list(possible_bomb_permutations):
-                    print("inside loop")
-                    tmp_game = Game(tmp_bomb_grid.shape[0], tmp_bomb_grid.shape[1], 1, False, [tmp_bomb_grid, tmp_numbered_grid, tmp_visible_grid])
-                    print(tmp_game)
-                    print(tmp_game.combined_grid)
-
+                for permutation in possible_bomb_permutations:
+                    contradiction = False
+                    #print("inside loop", permutation)
+                    tmp_bomb_grid_game = np.zeros(tmp_bomb_grid.shape)
                     for X, Y in permutation:
-                        tmp_game.right_mouse_click(X, Y)
+                        tmp_bomb_grid_game[X,Y] = -1
 
-                    tmp_game.
+                    #print(tmp_bomb_grid_game+tmp_visible_grid)
 
-                    print(tmp_game.visible_grid)
-                    print("Is done", tmp_game.is_done())
+                    for X in range(tmp_bomb_grid.shape[0]):
+                        for Y in range(tmp_bomb_grid.shape[1]):
+                            tmp_needed_number_of_bombs = tmp_visible_grid[X, Y]
+                            tmp_actual_number_of_bombs = 0
+                            for i in [X-1, X, X+1]:
+                                for j in [Y-1, Y, Y+1]:
+                                    if (i < 0) or (j < 0) or (i >= tmp_bomb_grid.shape[0]) or (j >= tmp_bomb_grid.shape[1]): #if coordinate is off of the grid
+                                        pass
+                                    else:
+                                        if (tmp_bomb_grid_game[i,j] == -1) and (tmp_visible_grid[X,Y] == 1):
+                                            tmp_actual_number_of_bombs += 1
+                            #print(tmp_needed_number_of_bombs, tmp_actual_number_of_bombs, 'needed and actual')
+                            if tmp_needed_number_of_bombs != tmp_actual_number_of_bombs:
+                                contradiction = True
+                                break
 
-                    break
+                    if not contradiction:
+                        solution_found = True
+                        break
 
+                solving_permutation = np.array(permutation)
+                solving_permutation[:,0] += Y_min - Y_adjust
+                solving_permutation[:,1] += X_min - X_adjust
+                #print(solving_permutation)
 
-
+                for X, Y in solving_permutation:
+                    self.right_mouse_click(X, Y)
 
         self.clear_step()
+        #print(self.done, self.win)
 
 
 thing = Solving_Game(10, 10, 20, True)
@@ -547,7 +563,7 @@ thing.solve_step()
 thing.solve_step()
 thing.solve_step()
 thing.solve_step()
-
+print(thing)
 
 
 '''
